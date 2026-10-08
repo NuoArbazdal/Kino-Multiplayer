@@ -13,8 +13,9 @@ const base=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=fs.readFileSync(game,'utf8');
 if(!source.includes("import * as THREE from 'three';")||!source.includes('function renderFrame(now)')||!source.includes('const scene=new THREE.Scene()'))throw Error('Unsupported original game revision: no changes made');
 const bridgeImport="import { attachKinoCoop } from './kino-runtime-bridge.js';";
+const menuImport="import { installKinoMultiplayerMenu } from './kino-multiplayer-menu.js';";
 if(source.includes(bridgeImport)){
- const markers=['const coopParams=new URLSearchParams','coop.shoot({targetId:target.z.id','if(!coop||coop.isHost)enemies.update(dt,player.getFeetPosition());','coop?.update(now);'];
+ const markers=[menuImport,'installKinoMultiplayerMenu(coop);','const coopParams=new URLSearchParams','coop.shoot({targetId:target.z.id','if(!coop||coop.isHost)enemies.update(dt,player.getFeetPosition());','coop?.update(now);'];
  if(!markers.every(marker=>source.includes(marker)))throw Error('Partial integration detected; inspect original and backup before retrying');
  console.log('Already integrated; no files changed');process.exit(0);
 }
@@ -32,7 +33,8 @@ const coop=attachKinoCoop({
 });`;
 let next=source;
 if(!next.includes(bridgeImport))next=bridgeImport+'\n'+next;
-if(!next.includes('const coopParams=new URLSearchParams'))next=next.replace('const scene=new THREE.Scene();', 'const scene=new THREE.Scene();\n'+bridgeInit);
+if(!next.includes(menuImport))next=menuImport+'\n'+next;
+if(!next.includes('const coopParams=new URLSearchParams'))next=next.replace('const scene=new THREE.Scene();', 'const scene=new THREE.Scene();\n'+bridgeInit+'\ninstallKinoMultiplayerMenu(coop);');
 if(!next.includes("coop.shoot({targetId:target.z.id")) {
  const needle="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;enemies.hurt(target.z,d*(target.head?Math.max(1,session.def.headMultiplier):1),target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
  const replacement="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;const hitDamage=d*(target.head?Math.max(1,session.def.headMultiplier):1);if(coop&&!coop.isHost)coop.shoot({targetId:target.z.id,damage:hitDamage,head:target.head});else enemies.hurt(target.z,hitDamage,target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
@@ -46,7 +48,7 @@ if(!next.includes('if(!coop||coop.isHost)enemies.update(dt,player.getFeetPositio
 }
 if(!next.includes('coop?.update(now);'))next=next.replace('  update(dt);renderer.info.reset();','  update(dt);coop?.update(now);renderer.info.reset();');
 if(next===source){console.log('Already integrated');process.exit(0);}
-for(const file of ['multiplayer.js','kino-runtime-bridge.js']){
+for(const file of ['multiplayer.js','kino-runtime-bridge.js','kino-multiplayer-menu.js']){
  const src=path.join(base,'client',file),dst=path.join(root,'export','web',file);
  if(!fs.existsSync(src))throw Error('Missing '+src);
  if(fs.existsSync(dst)&&fs.readFileSync(src,'utf8')!==fs.readFileSync(dst,'utf8'))throw Error('Refusing to overwrite modified '+dst);
