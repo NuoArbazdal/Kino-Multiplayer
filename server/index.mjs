@@ -16,17 +16,17 @@ wss.on('connection', ws => {
  const id=randomBytes(8).toString('hex'); let current=null; let lastPose=0;
  const leave=()=>{if(!current)return;const room=current;current=null;room.players.delete(id);if(!room.players.size){rooms.delete(room.code);return;}if(room.host===id)room.host=room.players.keys().next().value; broadcast(room,{type:'left',id});broadcast(room,roomState(room));};
  ws.on('message', raw=>{
-  let msg;try{msg=JSON.parse(String(raw));}catch{return send(ws,{type:'error',message:'Invalid JSON'});}if(!msg || typeof msg.type!=='string')return;
+  let msg;try{msg=JSON.parse(String(raw));}catch{return send(ws,{type:'error',message:'Invalid JSON'});}if(!msg || typeof msg!=='object' || Array.isArray(msg) || typeof msg.type!=='string')return;
   if(msg.type==='create'||msg.type==='join'){
     leave();let room;if(msg.type==='create'){const code=newCode();room={code,host:id,players:new Map(),round:1,started:false};rooms.set(code,room);}else{room=rooms.get(String(msg.code||'').trim().toUpperCase());if(!room)return send(ws,{type:'error',message:'Salon introuvable'});if(room.players.size>=MAX_PLAYERS)return send(ws,{type:'error',message:'Salon complet'});if(room.started)return send(ws,{type:'error',message:'Partie en cours'});}
     room.players.set(id,{id,name:cleanName(msg.name),ws,pose:null,health:100});current=room;send(ws,{type:'joined',id,code:room.code});broadcast(room,roomState(room));return;
   }
   if(!current)return send(ws,{type:'error',message:'Rejoins un salon'});
   if(msg.type==='leave'){leave();return;}
-  if(msg.type==='start'&&current.host===id){current.started=true;broadcast(current,{type:'started'});broadcast(current,roomState(current));return;}
+  if(msg.type==='start'&&current.host===id&&!current.started){current.started=true;broadcast(current,{type:'started'});broadcast(current,roomState(current));return;}
   if(msg.type==='pose'&&validPose(msg.pose)&&Date.now()-lastPose>=40){lastPose=Date.now();current.players.get(id).pose=msg.pose;broadcast(current,{type:'pose',id,pose:msg.pose},ws);return;}
-  if(msg.type==='event'&&current.started&&['shoot','reload','knife','interact','down','revive'].includes(msg.event)){broadcast(current,{type:'event',id,event:msg.event,data:msg.data??null},ws);return;}
-  if(msg.type==='world'&&current.started&&current.host===id){const allowed=['round','zombies','doors','points','drops'];if(!allowed.includes(msg.key))return;broadcast(current,{type:'world',key:msg.key,data:msg.data},ws);return;}
+  if(msg.type==='event'&&current.started&&['shoot','reload','knife','interact','down','revive'].includes(msg.event)&&JSON.stringify(msg.data??null).length<=2048){broadcast(current,{type:'event',id,event:msg.event,data:msg.data??null},ws);return;}
+  if(msg.type==='world'&&current.started&&current.host===id){const allowed=['round','zombies','doors','points','drops'];if(!allowed.includes(msg.key)||JSON.stringify(msg.data??null).length>4096)return;broadcast(current,{type:'world',key:msg.key,data:msg.data},ws);return;}
  });
  ws.on('close',leave);ws.on('error',()=>{});
 });
