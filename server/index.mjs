@@ -66,7 +66,7 @@ wss.on('connection', ws => {
   if(msg.type==='create'||msg.type==='join'){
     leave();let room;if(msg.type==='create'){const code=newCode();room={code,host:id,players:new Map(),round:1,started:false};rooms.set(code,room);}else{room=rooms.get(String(msg.code||'').trim().toUpperCase());if(!room)return send(ws,{type:'error',message:'Salon introuvable'});if(room.players.size>=MAX_PLAYERS&&!msg.resume)return send(ws,{type:'error',message:'Salon complet'});if(room.started&&!msg.resume)return send(ws,{type:'error',message:'Partie en cours'});}
     const token=typeof msg.resume==='string'?msg.resume:'';
-    const resumed=[...room.players.values()].find(p=>p.token===token&&token&&p.ws===null);
+    const resumed=[...room.players.values()].find(p=>p.token===token&&token&&(p.ws===null||p.ws!==ws));
     if(room.started&&!resumed)return send(ws,{type:'error',message:'Reconnexion non autorisée'});
     if(resumed){
       clearTimeout(resumed.expiry);id=resumed.id;resumed.ws=ws;resumed.expiry=null;
@@ -78,7 +78,7 @@ wss.on('connection', ws => {
     send(ws,{type:'joined',id,code:room.code,resume:room.players.get(id).token,started:room.started});
     broadcast(room,roomState(room));return;
   }
-  if(!current)return send(ws,{type:'error',message:'Rejoins un salon'});
+  if(!current||current.players.get(id)?.ws!==ws)return send(ws,{type:'error',message:'Rejoins un salon'});
   if(msg.type==='leave'){leave();return;}
   if(msg.type==='start'&&current.host===id&&!current.started){current.started=true;broadcast(current,{type:'started'});broadcast(current,roomState(current));return;}
   if(msg.type==='pose'&&validPose(msg.pose)&&Date.now()-lastPose>=40){lastPose=Date.now();current.players.get(id).pose=msg.pose;broadcast(current,{type:'pose',id,pose:msg.pose},ws);return;}
