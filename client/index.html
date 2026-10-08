@@ -3,7 +3,7 @@
 :root{color-scheme:dark;font:16px system-ui;background:#101014;color:#f4f4f4}body{max-width:640px;margin:8vh auto;padding:20px}h1{letter-spacing:.07em}section{background:#1c1c24;padding:24px;border-radius:12px;margin:16px 0}input,button{font:inherit;padding:12px;border-radius:6px;margin:5px 3px;background:#292934;color:white;border:1px solid #555}button{cursor:pointer;background:#7e2222}button:disabled{opacity:.4}#players{line-height:2}#status{min-height:24px}small{color:#bbb}</style></head><body>
 <h1>KINO MULTIPLAYER</h1><p>Salons coopératifs — 4 joueurs maximum</p>
 <section id="connect"><label>Adresse WebSocket du serveur<br><input id="endpoint" style="width:95%" placeholder="wss://votre-serveur.onrender.com"></label><p><label>Pseudo <input id="name" maxlength="24" value="Joueur"></label></p><p><label>Adresse du jeu intégré (même site) <input id="game" style="width:95%" value="./game/index.html"></label></p><button id="create">Créer un salon</button><p><input id="code" maxlength="8" placeholder="Code du salon"><button id="join">Rejoindre</button></p></section>
-<section id="room" hidden><h2>Salon <span id="roomCode"></span></h2><button id="copy">Copier le code</button><div id="players"></div><button id="start" disabled>Démarrer la partie</button><button id="leave">Quitter</button><p><small>Le lancement ouvrira le jeu adapté hébergé sur ce site. Il doit être installé dans le dossier game/.</small></p></section>
+<section id="room" hidden><h2>Salon <span id="roomCode"></span></h2><button id="copy">Copier le code</button><div id="players"></div><button id="start" disabled>Démarrer la partie</button><button id="leave">Quitter</button><p><small>Tu peux tester les salons ici. Le jeu coopératif complet nécessite encore l'intégration du moteur Kino.</small></p></section>
 <p id="status" role="status"></p>
 <script type="module">
 import {KinoMultiplayer} from './multiplayer.js';
@@ -30,5 +30,5 @@ $('join').onclick=async()=>{try{(await connect()).join($('code').value,$('name')
 $('start').onclick=()=>net?.start();
 $('leave').onclick=()=>{net?.send({type:'leave'});net?.disconnect();$('room').hidden=true;};
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('roomCode').textContent);status('Code copié');}catch{status('Code : '+$('roomCode').textContent);}};
-const param=new URLSearchParams(location.search);if(param.has('server'))$('endpoint').value=param.get('server');
+const param=new URLSearchParams(location.search);$('endpoint').value=param.has('server')?param.get('server'):(location.protocol==='https:'?'wss://':'ws://')+location.host;
 </script></body></html>
