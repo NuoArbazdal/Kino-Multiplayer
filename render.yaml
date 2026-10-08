@@ -2,7 +2,10 @@ services:
   - type: web
     name: kino-multiplayer-server
     runtime: node
-    rootDir: server
-    buildCommand: npm install
-    startCommand: npm start
+    branch: feature/game-integration
+    buildCommand: npm --prefix server install
+    startCommand: node server/index.mjs
     healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
