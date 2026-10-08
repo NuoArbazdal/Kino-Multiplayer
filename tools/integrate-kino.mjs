@@ -22,6 +22,7 @@ const coop=attachKinoCoop({
   getWorld:()=>world,
   serverUrl:coopParams.get('server'),
   code:coopParams.get('room'),
+  resume:coopParams.get('resume'),
   name:coopParams.get('name')||'Joueur'
 });`;
 let next=source;
