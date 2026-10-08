@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { KinoMultiplayer } from './multiplayer.js';
 
-export function attachKinoCoop({scene,camera,getPlayerPosition,getSession,getEnemies,serverUrl,code,name='Joueur'}) {
+export function attachKinoCoop({scene,camera,getPlayerPosition,getSession,getEnemies,serverUrl,code,resume,name='Joueur'}) {
   if(!serverUrl || !code)return null;
   const net=new KinoMultiplayer(serverUrl);
   const avatars=new Map(), poses=new Map(), shotTimes=new Map();
@@ -70,7 +70,7 @@ export function attachKinoCoop({scene,camera,getPlayerPosition,getSession,getEne
     for(const z of [...enemies.list])if(!seen.has(z.id))enemies.remove(z);
   });
   net.addEventListener('disconnected',()=>{connected=false;started=false;for(const id of [...avatars.keys()])remove(id);});
-  net.connect().then(()=>net.join(code,name)).catch(e=>console.warn('Kino coop unavailable:',e));
+  net.connect().then(()=>net.join(code,name,resume)).catch(e=>console.warn('Kino coop unavailable:',e));
   return {
     net,
     get isHost(){return isHost;},
