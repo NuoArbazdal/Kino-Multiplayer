@@ -14,7 +14,7 @@ async function connect(){
  }
  throw Error('Server did not start');
 }
-function wait(ws,type,timeout=2000){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{ws.off('message',handler);reject(Error('Timeout: '+type));},timeout);const handler=raw=>{let data;try{data=JSON.parse(raw);}catch{return;}if(data.type===type){clearTimeout(timer);ws.off('message',handler);resolve(data);}};ws.on('message',handler);});}
+function wait(ws,type,timeout=2000,predicate=()=>true){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{ws.off('message',handler);reject(Error('Timeout: '+type));},timeout);const handler=raw=>{let data;try{data=JSON.parse(raw);}catch{return;}if(data.type===type&&predicate(data)){clearTimeout(timer);ws.off('message',handler);resolve(data);}};ws.on('message',handler);});}
 function send(ws,data){ws.send(JSON.stringify(data));}
 test('private rooms, four-player cap, relay and host transfer',async t=>{
  const sockets=[];t.after(()=>{sockets.forEach(ws=>ws.terminate());child.kill();});
@@ -29,5 +29,5 @@ test('private rooms, four-player cap, relay and host transfer',async t=>{
  const after=await rejoined;assert.equal(after.id,previous.id);assert.equal(after.started,true);
  const forbidden=await connect();sockets.push(forbidden);const denied=wait(forbidden,'error');send(forbidden,{type:'join',code,name:'Intruder',resume:'wrong'});assert.equal((await denied).message,'Reconnexion non autorisée');
  const left=wait(guests[0],'left');host.close();await left;
- const state=wait(guests[1],'room');send(guests[0],{type:'leave'});const update=await state;assert.ok(update.players.length<=2);
+ const state=wait(guests[1],'room',2000,data=>!data.players.some(p=>p.id===guestInfo[0].id));send(guests[0],{type:'leave'});const update=await state;assert.equal(update.players.length,2);
 });
