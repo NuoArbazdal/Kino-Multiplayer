@@ -1,0 +1,43 @@
+name: Integration with upstream Kino engine
+on:
+  push:
+    paths:
+      - 'tools/**'
+      - 'client/multiplayer.js'
+      - 'client/kino-runtime-bridge.js'
+      - '.github/workflows/integration.yml'
+  pull_request:
+    paths:
+      - 'tools/**'
+      - 'client/multiplayer.js'
+      - 'client/kino-runtime-bridge.js'
+      - '.github/workflows/integration.yml'
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Fetch only original game's entry points (no assets)
+        run: |
+          mkdir upstream
+          git -C upstream init
+          git -C upstream remote add origin https://github.com/luckeyfaraday/kino-der-toten.git
+          git -C upstream sparse-checkout init --no-cone
+          git -C upstream sparse-checkout set --no-cone export/web/game.js export/web/index.html
+          git -C upstream -c filter.lfs.smudge= -c filter.lfs.required=false fetch --depth 1 --filter=blob:none origin main
+          git -C upstream checkout --detach FETCH_HEAD
+      - name: Check integration and protect original
+        run: |
+          node tools/integrate-kino.mjs upstream
+          node --check upstream/export/web/game.js
+          node --check upstream/export/web/kino-runtime-bridge.js
+          sha256sum upstream/export/web/game.js > /tmp/kino-integrated.sha
+          sha256sum upstream/export/web/game.js.kino-multiplayer.bak > /tmp/kino-original.sha
+          node tools/integrate-kino.mjs upstream
+          sha256sum -c /tmp/kino-integrated.sha
+          sha256sum -c /tmp/kino-original.sha
+          git -C upstream show HEAD:export/web/game.js > /tmp/kino-pristine.js
+          cmp -s /tmp/kino-pristine.js upstream/export/web/game.js.kino-multiplayer.bak
