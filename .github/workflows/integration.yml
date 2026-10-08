@@ -5,6 +5,7 @@ on:
       - 'tools/**'
       - 'client/multiplayer.js'
       - 'client/kino-runtime-bridge.js'
+      - 'client/kino-multiplayer-menu.js'
       - '.github/workflows/integration.yml'
   pull_request:
     paths:
@@ -34,6 +35,8 @@ jobs:
           node tools/integrate-kino.mjs upstream
           node --check upstream/export/web/game.js
           node --check upstream/export/web/kino-runtime-bridge.js
+          node --check upstream/export/web/kino-multiplayer-menu.js
+          grep -q 'installKinoMultiplayerMenu(coop)' upstream/export/web/game.js
           sha256sum upstream/export/web/game.js > /tmp/kino-integrated.sha
           sha256sum upstream/export/web/game.js.kino-multiplayer.bak > /tmp/kino-original.sha
           node tools/integrate-kino.mjs upstream
