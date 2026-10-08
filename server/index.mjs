@@ -3,7 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
 const PORT = Number(process.env.PORT || 3000);
 const rooms = new Map();
-const TRANSFER_GRACE_MS = 30000;
+const TRANSFER_GRACE_MS = process.env.NODE_ENV === 'test' ? 150 : 30000;
 const MAX_PLAYERS = 4;
 const send = (ws, data) => { if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data)); };
 const broadcast = (room, data, except) => { for (const player of room.players.values()) if(player.ws && player.ws !== except) send(player.ws, data); };
