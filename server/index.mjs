@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { randomBytes } from 'node:crypto';
@@ -11,7 +13,30 @@ const roomState = room => ({type:'room', code:room.code, host:room.host, players
 const newCode = () => { let code; do { code=randomBytes(4).toString('hex').toUpperCase(); } while (rooms.has(code)); return code; };
 const cleanName = name => String(name||'Joueur').slice(0,24).replace(/[<>]/g,'');
 const validPose = p => p && ['x','y','z','yaw'].every(k => Number.isFinite(p[k]) && Math.abs(p[k]) < 100000);
-const server = http.createServer((req,res)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Content-Type','application/json');res.end(JSON.stringify({service:'kino-multiplayer',status:'ok',rooms:rooms.size}));});
+const publicFiles = new Map([
+ ['/', ['../client/index.html','text/html; charset=utf-8']],
+ ['/index.html', ['../client/index.html','text/html; charset=utf-8']],
+ ['/multiplayer.js', ['../client/multiplayer.js','text/javascript; charset=utf-8']]
+]);
+const server = http.createServer(async(req,res)=>{
+ const pathname=new URL(req.url??'/', 'http://localhost').pathname;
+ if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405,{Allow:'GET, HEAD'});res.end();return;}
+ if(pathname==='/health'){
+   res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
+   res.end(req.method==='HEAD'?undefined:JSON.stringify({service:'kino-multiplayer',status:'ok',rooms:rooms.size}));
+   return;
+ }
+ const entry=publicFiles.get(pathname);
+ if(!entry){res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'});res.end('Not found');return;}
+ try{
+   const body=await readFile(fileURLToPath(new URL(entry[0],import.meta.url)));
+   res.writeHead(200,{'Content-Type':entry[1],'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'});
+   res.end(req.method==='HEAD'?undefined:body);
+ }catch(error){
+   console.error('Static file unavailable',error.message);
+   res.writeHead(500);res.end('Site unavailable');
+ }
+});
 const wss = new WebSocketServer({server,maxPayload:8192});
 wss.on('connection', ws => {
  let id=randomBytes(8).toString('hex'); let current=null; let lastPose=0;
