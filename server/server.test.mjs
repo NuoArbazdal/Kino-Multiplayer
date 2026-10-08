@@ -31,3 +31,22 @@ test('private rooms, four-player cap, relay and host transfer',async t=>{
  const left=wait(guests[0],'left');host.close();await left;
  const state=wait(guests[1],'room',2000,data=>!data.players.some(p=>p.id===guestInfo[0].id));send(guests[0],{type:'leave'});const update=await state;assert.equal(update.players.length,2);
 });
+
+test('serves lobby frontend, JS module, health, and safe 404',async()=>{
+ const base='http://127.0.0.1:'+port;
+ let response;
+ for(let i=0;i<50;i++){try{response=await fetch(base+'/health');break;}catch{await sleep(50);}}
+ assert.equal(response?.status,200);
+ assert.equal((await response.json()).status,'ok');
+ const home=await fetch(base+'/');
+ assert.equal(home.status,200);
+ assert.match(home.headers.get('content-type'),/text\/html/);
+ assert.match(await home.text(),/KINO MULTIPLAYER/);
+ const script=await fetch(base+'/multiplayer.js');
+ assert.equal(script.status,200);
+ assert.match(await script.text(),/class KinoMultiplayer/);
+ const bad=await fetch(base+'/no-such-file');
+ assert.equal(bad.status,404);
+ const head=await fetch(base+'/',{method:'HEAD'});
+ assert.equal(head.status,200);
+});
