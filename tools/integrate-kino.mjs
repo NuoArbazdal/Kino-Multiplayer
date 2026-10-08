@@ -56,7 +56,7 @@ for(const file of ['multiplayer.js','kino-runtime-bridge.js','kino-multiplayer-m
 if(fs.existsSync(game+'.kino-multiplayer.bak'))throw Error('Existing backup detected; refusing to overwrite');
 fs.writeFileSync(game+'.kino-multiplayer.bak',source,{flag:'wx'});
 fs.writeFileSync(game,next);
-for(const file of ['multiplayer.js','kino-runtime-bridge.js'])fs.copyFileSync(path.join(base,'client',file),path.join(root,'export','web',file));
+for(const file of ['multiplayer.js','kino-runtime-bridge.js','kino-multiplayer-menu.js'])fs.copyFileSync(path.join(base,'client',file),path.join(root,'export','web',file));
 console.log('Bridge integrated; original game backup: '+game+'.kino-multiplayer.bak');
 console.log('Open game with ?server=wss://HOST&room=CODE&name=NAME after deploying the server.');
 console.log('WARNING: this is remote-player position visualization, not synchronized cooperative gameplay.');
