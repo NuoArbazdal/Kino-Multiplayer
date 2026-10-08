@@ -13,6 +13,11 @@ const base=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=fs.readFileSync(game,'utf8');
 if(!source.includes("import * as THREE from 'three';")||!source.includes('function renderFrame(now)')||!source.includes('const scene=new THREE.Scene()'))throw Error('Unsupported original game revision: no changes made');
 const bridgeImport="import { attachKinoCoop } from './kino-runtime-bridge.js';";
+if(source.includes(bridgeImport)){
+ const markers=['const coopParams=new URLSearchParams','coop.shoot({targetId:target.z.id','if(!coop||coop.isHost)enemies.update(dt,player.getFeetPosition());','coop?.update(now);'];
+ if(!markers.every(marker=>source.includes(marker)))throw Error('Partial integration detected; inspect original and backup before retrying');
+ console.log('Already integrated; no files changed');process.exit(0);
+}
 const bridgeInit=`const coopParams=new URLSearchParams(location.search);
 const coop=attachKinoCoop({
   scene,camera,
@@ -28,7 +33,7 @@ const coop=attachKinoCoop({
 let next=source;
 if(!next.includes(bridgeImport))next=bridgeImport+'\n'+next;
 if(!next.includes('const coopParams=new URLSearchParams'))next=next.replace('const scene=new THREE.Scene();', 'const scene=new THREE.Scene();\n'+bridgeInit);
-if(!next.includes("coop?.shoot({targetId:target.z.id")) {
+if(!next.includes("coop.shoot({targetId:target.z.id")) {
  const needle="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;enemies.hurt(target.z,d*(target.head?Math.max(1,session.def.headMultiplier):1),target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
  const replacement="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;const hitDamage=d*(target.head?Math.max(1,session.def.headMultiplier):1);if(coop&&!coop.isHost)coop.shoot({targetId:target.z.id,damage:hitDamage,head:target.head});else enemies.hurt(target.z,hitDamage,target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
  if(!next.includes(needle))throw Error('Shot hook not found; refusing to patch');
@@ -46,7 +51,8 @@ for(const file of ['multiplayer.js','kino-runtime-bridge.js']){
  if(!fs.existsSync(src))throw Error('Missing '+src);
  if(fs.existsSync(dst)&&fs.readFileSync(src,'utf8')!==fs.readFileSync(dst,'utf8'))throw Error('Refusing to overwrite modified '+dst);
 }
-fs.writeFileSync(game+'.kino-multiplayer.bak',source);
+if(fs.existsSync(game+'.kino-multiplayer.bak'))throw Error('Existing backup detected; refusing to overwrite');
+fs.writeFileSync(game+'.kino-multiplayer.bak',source,{flag:'wx'});
 fs.writeFileSync(game,next);
 for(const file of ['multiplayer.js','kino-runtime-bridge.js'])fs.copyFileSync(path.join(base,'client',file),path.join(root,'export','web',file));
 console.log('Bridge integrated; original game backup: '+game+'.kino-multiplayer.bak');
