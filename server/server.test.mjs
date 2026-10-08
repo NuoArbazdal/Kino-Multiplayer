@@ -42,6 +42,11 @@ test('private rooms, four-player cap, relay and host transfer',async t=>{
  const extra=await connect();sockets.push(extra);const err=wait(extra,'error');send(extra,{type:'join',code});assert.equal((await err).message,'Salon complet');
  const relayed=wait(guests[0],'pose');send(host,{type:'pose',pose:{x:1,y:2,z:3,yaw:0}});assert.equal((await relayed).id,id);
  const started=wait(guests[0],'started');send(host,{type:'start'});await started;
+ const takeover=await connect();sockets.push(takeover);
+ const taken=wait(takeover,'joined');send(takeover,{type:'join',code,name:'Guest1',resume:guestInfo[1].resume});
+ assert.equal((await taken).id,guestInfo[1].id);
+ const refused=wait(guests[1],'error');send(guests[1],{type:'pose',pose:{x:0,y:0,z:0,yaw:0}});
+ assert.equal((await refused).message,'Rejoins un salon');
  const previous=guestInfo[2];guests[2].close();await new Promise(resolve=>guests[2].once('close',resolve));
  const resumed=await connect();sockets.push(resumed);
  const rejoined=wait(resumed,'joined');send(resumed,{type:'join',code,name:'Guest2',resume:previous.resume});
