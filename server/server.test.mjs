@@ -53,6 +53,6 @@ test('private rooms, four-player cap, relay and host transfer',async t=>{
  const after=await rejoined;assert.equal(after.id,previous.id);assert.equal(after.started,true);
  const forbidden=await connect();sockets.push(forbidden);const denied=wait(forbidden,'error');send(forbidden,{type:'join',code,name:'Intruder',resume:'wrong'});assert.equal((await denied).message,'Reconnexion non autorisée');
  const left=wait(guests[0],'left');host.close();await left;
- const state=wait(guests[1],'room',2000,data=>!data.players.some(p=>p.id===guestInfo[0].id));send(guests[0],{type:'leave'});const update=await state;assert.equal(update.players.length,2);
+ const state=wait(takeover,'room',2000,data=>!data.players.some(p=>p.id===guestInfo[0].id));send(guests[0],{type:'leave'});const update=await state;assert.equal(update.players.length,2);
 });
 
