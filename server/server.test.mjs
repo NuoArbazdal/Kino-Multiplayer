@@ -5,7 +5,7 @@ import { WebSocket } from 'ws';
 
 const port=32000+Math.floor(Math.random()*2000);
 const endpoint='ws://127.0.0.1:'+port;
-const child=spawn(process.execPath,['index.mjs'],{cwd:new URL('.',import.meta.url),env:{...process.env,PORT:String(port)},stdio:'pipe'});
+const child=spawn(process.execPath,['index.mjs'],{cwd:new URL('.',import.meta.url),env:{...process.env,PORT:String(port),NODE_ENV:'test'},stdio:'pipe'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function connect(){
  for(let i=0;i<50;i++){
