@@ -29,11 +29,11 @@ if(!next.includes(bridgeImport))next=bridgeImport+'\n'+next;
 if(!next.includes('const coopParams=new URLSearchParams'))next=next.replace('const scene=new THREE.Scene();', 'const scene=new THREE.Scene();\n'+bridgeInit);
 if(!next.includes("coop?.shoot({targetId:target.z.id")) {
  const needle="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;enemies.hurt(target.z,d*(target.head?Math.max(1,session.def.headMultiplier):1),target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
- const replacement="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;const hitDamage=d*(target.head?Math.max(1,session.def.headMultiplier):1);if(coop)coop.shoot({targetId:target.z.id,damage:hitDamage,head:target.head});else enemies.hurt(target.z,hitDamage,target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
+ const replacement="if(target){const d=target.distance>session.def.range?session.def.minDamage:session.def.damage;const hitDamage=d*(target.head?Math.max(1,session.def.headMultiplier):1);if(coop&&!coop.isHost)coop.shoot({targetId:target.z.id,damage:hitDamage,head:target.head});else enemies.hurt(target.z,hitDamage,target.head,false,session.def.explosionRadius?'explosion':'bullet');}";
  if(!next.includes(needle))throw Error('Shot hook not found; refusing to patch');
  next=next.replace(needle,replacement);
 }
-if(!next.includes('coop?.update(now);'))next=next.replace('  update(dt);renderer.info.reset();','  update(dt);coop?.update(now);renderer.info.reset();');
+if(!next.includes('if(!coop||coop.isHost)enemies.update(dt,player.getFeetPosition());')){\n const needle='enemies.update(dt,player.getFeetPosition());';\n if(!next.includes(needle))throw Error('Enemy update hook unavailable');\n next=next.replace(needle,'if(!coop||coop.isHost)enemies.update(dt,player.getFeetPosition());');\n}\nif(!next.includes('coop?.update(now);'))next=next.replace('  update(dt);renderer.info.reset();','  update(dt);coop?.update(now);renderer.info.reset();');
 if(next===source){console.log('Already integrated');process.exit(0);}
 for(const file of ['multiplayer.js','kino-runtime-bridge.js']){
  const src=path.join(base,'client',file),dst=path.join(root,'export','web',file);
