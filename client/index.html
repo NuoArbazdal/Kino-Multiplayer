@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kino Multiplayer — Salons</title><style>
+:root{color-scheme:dark;font:16px system-ui;background:#101014;color:#f4f4f4}body{max-width:640px;margin:8vh auto;padding:20px}h1{letter-spacing:.07em}section{background:#1c1c24;padding:24px;border-radius:12px;margin:16px 0}input,button{font:inherit;padding:12px;border-radius:6px;margin:5px 3px;background:#292934;color:white;border:1px solid #555}button{cursor:pointer;background:#7e2222}button:disabled{opacity:.4}#players{line-height:2}#status{min-height:24px}small{color:#bbb}</style></head><body>
+<h1>KINO MULTIPLAYER</h1><p>Salons coopératifs — 4 joueurs maximum</p>
+<section id="connect"><label>Adresse WebSocket du serveur<br><input id="endpoint" style="width:95%" placeholder="wss://votre-serveur.onrender.com"></label><p><label>Pseudo <input id="name" maxlength="24" value="Joueur"></label></p><button id="create">Créer un salon</button><p><input id="code" maxlength="8" placeholder="Code du salon"><button id="join">Rejoindre</button></p></section>
+<section id="room" hidden><h2>Salon <span id="roomCode"></span></h2><button id="copy">Copier le code</button><div id="players"></div><button id="start" disabled>Démarrer la partie</button><button id="leave">Quitter</button><p><small>La connexion des salons fonctionne indépendamment du jeu. Le lancement du moteur Kino en coop n'est pas encore intégré.</small></p></section>
+<p id="status" role="status"></p>
+<script type="module">
+import {KinoMultiplayer} from './multiplayer.js';
+let net=null,playerId=null,hostId=null;const $=id=>document.getElementById(id);
+function status(s){$('status').textContent=s;}
+async function connect(){if(net?.socket?.readyState===1)return net;const url=$('endpoint').value.trim();if(!/^wss?:\/\//.test(url))throw Error('Adresse WebSocket invalide');net=new KinoMultiplayer(url);net.addEventListener('joined',e=>{playerId=e.detail.id;$('room').hidden=false;$('roomCode').textContent=e.detail.code;status('Connecté au salon');});net.addEventListener('room',e=>{const r=e.detail;hostId=r.host;$('players').replaceChildren(...r.players.map(p=>{const el=document.createElement('div');el.textContent=(p.id===r.host?'★ ':'')+p.name+(p.id===playerId?' (vous)':'');return el;}));$('start').disabled=hostId!==playerId||r.started;});net.addEventListener('started',()=>status('Salon lancé. Intégration au moteur du jeu encore nécessaire.'));net.addEventListener('error',e=>status(e.detail.message));net.addEventListener('disconnected',()=>{status('Connexion interrompue');$('room').hidden=true;net=null;});await net.connect();return net;}
+$('create').onclick=async()=>{try{(await connect()).create($('name').value);}catch(e){status(e.message);}};
+$('join').onclick=async()=>{try{(await connect()).join($('code').value,$('name').value);}catch(e){status(e.message);}};
+$('start').onclick=()=>net?.start();
+$('leave').onclick=()=>{net?.send({type:'leave'});net?.disconnect();$('room').hidden=true;};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('roomCode').textContent);status('Code copié');}catch{status('Code : '+$('roomCode').textContent);}};
+const param=new URLSearchParams(location.search);if(param.has('server'))$('endpoint').value=param.get('server');
+</script></body></html>
